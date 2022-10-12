@@ -1,0 +1,6 @@
+there should be 2 folders in the same dir as this note
+ds1 & d2 containing the two datasets
+
+also, please run the codes from the root directory
+
+Note that for the knn and logistic regression there is two lines that might need to be changed for the program to run correctly (commented both of them)
