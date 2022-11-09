@@ -11,7 +11,7 @@ import re
 def gaussian(x, mu, sigma):
 	# calcualte the multi-variant guassian
 	det = np.linalg.det(sigma)
-	down = 2 * np.pi ** 16 ** np.sqrt(det)
+	down = 2 * np.pi * np.sqrt(det)
 	xc = x - mu
 	xt = np.transpose(xc)
 	inv = np.linalg.inv(sigma)
@@ -21,6 +21,16 @@ def gaussian(x, mu, sigma):
 def prob(classidx, x, sigmas, mus, priors):
 	g = gaussian(x, mus[classidx], sigmas[classidx])
 	return g * priors[classidx]
+
+def predict(sample, sigmas, mus, priors):
+	# calculate prob of belonging
+	probs = np.zeros((10,))
+	for i in range(10):
+		probs[i] = prob(i, sample, sigmas, mus, priors)
+
+	# choose class
+	guessed_label = np.argmax(probs)
+	return guessed_label
 
 # read the data
 paths = glob.glob("./1/ds/training_validation/*")
@@ -35,27 +45,17 @@ for filePath in paths:
 	with open(filePath) as f:
 		for i in range(32):
 			line = f.readline();
-			x.append(int(line, base=2)/6000)
+			x.append(int(line, base=2))
 	data.append(x)
 
 data = np.array(data)
+data = data / data.std()
 
 # seperate the data by label
-classes = []
+classes = [[], [], [], [], [], [], [], [], [], []]
 cur_label = ''
-iter = 0
-tmp = []
 for label, sample in zip(labels, data):
-	if cur_label != label:
-		cur_label = label
-		if(iter > 0):
-			classes.append(tmp)
-			tmp = []
-
-	tmp.append(sample)
-	iter += 1
-
-classes.append(tmp)
+	classes[int(label)].append(sample)
 
 # calculate all the sigmas and mus and priors for different classes
 sigmas = []
@@ -70,6 +70,13 @@ for cls in classes:
 	sigmas.append(cov)
 	mus.append(mu)
 
+# training data accuracy
+accuracy = 0
+for label, sample in zip(labels, data):
+	if int(label) == predict(sample, sigmas, mus, priors):
+		accuracy += 1
+print("training set accuracy: " + str(accuracy/len(data)))
+
 # read the test data
 paths = glob.glob("./1/ds/test/*")
 data = []
@@ -83,26 +90,21 @@ for filePath in paths:
 	with open(filePath) as f:
 		for i in range(32):
 			line = f.readline();
-			x.append(int(line, base=2)/6000)
+			x.append(int(line, base=2))
 	data.append(x)
 
 data = np.array(data)
+data = data / data.std()
 
 # test using the calculated sigmas
 accuracy = 0
 for label, sample in zip(labels, data):
-	# calculate prob of belonging
-	probs = np.zeros((10,))
-	for i in range(10):
-		probs[i] = prob(i, sample, sigmas, mus, priors)
-
-	# choose class
-	guessed_label = np.argmax(probs)
+	guess = predict(sample, sigmas, mus, priors)
 
 	# evaluate correctness
-	if(int(label) == guessed_label):
+	if(int(label) == guess):
 		accuracy += 1
 
 # print accuracy
 accuracy /= len(data)
-print(accuracy)
+print("test set accuract: " + str(accuracy))
